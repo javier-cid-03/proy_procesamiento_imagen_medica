@@ -185,8 +185,7 @@ ordinal a 384~px con optimización de umbrales~(Exp.~F), corrección de
 \textit{shortcut learning} mediante preprocesado Ben~Graham~(Exp.~G), fusión
 multimodal CNN\,+\,radiómica con LightGBM~(Exp.~I) y preentrenamiento en
 APTOS~2015~(Exp.~J). La métrica principal es el kappa cuadrático ponderado~($\kappa^2$),
-estándar en la literatura de gradación automática de RD. Los resultados completos
-y el análisis comparativo de todos los experimentos se presentan en la Sección~4.
+estándar en la literatura de gradación automática de RD. Esta métrica no solo mide acierto, sino que penaliza más los errores graves que los leves, teniendo en cuenta el orden entre clases. Los resultados completos y el análisis comparativo de todos los experimentos se presentan en la Sección~4.
 
 % ══════════════════════════════════════════════════════════════════════════════
 %  ÍNDICE
@@ -216,7 +215,7 @@ oftalmólogos resulta inviable a gran escala, lo que motiva el desarrollo de sis
 automáticos de gradación. Además, estos sistemas no solo permiten escalar el
 cribado, sino que también facilitan y agilizan el trabajo del personal sanitario,
 sirviendo como herramienta de apoyo en la clasificación de la enfermedad y en la
-toma de decisiones clínicas.
+toma de decisiones clínicas. En este contexto, se emplea el dataset público APTOS~2019, ampliamente utilizado en la literatura, que contiene retinografías etiquetadas según el grado de severidad de la enfermedad, lo que permite evaluar de forma objetiva el rendimiento de los modelos propuestos.
 
 La enfermedad progresa en cinco estadios (Tabla~\ref{tab:grados}): desde la ausencia
 de lesiones (G0) hasta la neovascularización proliferativa con riesgo de ceguera súbita
@@ -250,10 +249,15 @@ conforman los desafíos técnicos que este proyecto aborda de forma sistemática
   \end{tabularx}
 \end{table}
 
+\newpage
+
 El objetivo del proyecto es construir un pipeline reproducible y clínicamente
 interpretable que parta de un baseline sólido (EfficientNetBN-B3, APTOS~2019,
 224~px) y lo mejore de forma justificada mediante diez experimentos que atacan
-cada una de las debilidades identificadas. La métrica principal es el
+cada una de las debilidades identificadas. Para ello, se emplea el dataset público
+APTOS~2019, compuesto por retinografías etiquetadas en cinco grados de severidad,
+lo que permite abordar el problema en un entorno realista y con datos clínicamente
+relevantes. La métrica principal es el
 \textbf{kappa cuadrático ponderado}~($\kappa^2$), que penaliza los errores
 proporcionalmente al cuadrado de la distancia ordinal entre grados, alineándose
 con la relevancia clínica de cada tipo de error. La elección de la RD como
