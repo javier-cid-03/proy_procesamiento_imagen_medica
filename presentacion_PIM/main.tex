@@ -47,7 +47,7 @@
   Miguel Ángel Véliz Ayala \and
   Martín Solano Martínez}
 \institute{Procesamiento de Imagen en Medicina --- Curso 2025/2026}
-\date{24 de abril de 2026}
+\date{27 de abril de 2026}
 
 \begin{document}
 
@@ -200,106 +200,127 @@
   \end{columns}
 \end{frame}
 
-% ── Slide 5: Limitaciones del baseline ───────────────────────────────────────
-\begin{frame}{Limitaciones identificadas}
-  % GUION JAVIER: "Del análisis del baseline sacamos tres limitaciones claras
-  % que motivan los experimentos posteriores. Y paso el turno a Miguel que
-  % va a explicar cómo las atacamos."
-
-  \begin{enumerate}
-    \item[\textbf{L1.}] \textbf{Desbalance de clases} --- G3 solo tiene 154
-          imágenes, la CrossEntropy ponderada no es suficiente.
-          $\to$ \textit{Exp.~A, D, E, J}
-    \item[\textbf{L2.}] \textbf{Resolución insuficiente} --- un microaneurisma
-          a 224\,px $=$ 1--3 píxeles, al borde de desaparecer.
-          $\to$ \textit{Exp.~F}
-    \item[\textbf{L3.}] \textbf{Pérdida desalineada} --- CrossEntropy trata
-          las clases como independientes, pero $\kappa^2$ penaliza la
-          distancia ordinal. El gradiente no empuja hacia lo que se mide.
-          $\to$ \textit{Exp.~F}
-  \end{enumerate}
-
-  \vspace{8pt}
-  \centering
-  \textit{Además, las debilidades se descubren iterativamente:}\\
-  \textit{el Grad-CAM de F motiva G, los resultados de B motivan I\ldots}
-\end{frame}
-
 % ══════════════════════════════════════════════════════════════════════════════
 %  SECCIÓN 2: MIGUEL — Exp. A, D, E, F (~3.5 min)
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Experimentos: Desbalance y Regresión Ordinal}
 
-% ── Slide 6: Exp A ───────────────────────────────────────────────────────────
+% ── Slide 5: Exp A ───────────────────────────────────────────────────────────
 \begin{frame}{Exp.~A --- Sobremuestreo}
-  % GUION MIGUEL: "Para atacar el desbalance, la primera idea es dar más
-  % peso a las clases minoritarias replicando sus muestras. El kappa sube
-  % a 0.88 y G2 es la gran beneficiaria. Pero G3 apenas mejora: replicar
-  % 154 imágenes no añade información nueva. Lo que necesitamos es variedad,
-  % no volumen. Esto lo resuelve el Exp J con datos externos."
-
   \begin{columns}[T]
     \begin{column}{0.55\textwidth}
-      \textbf{Problema:} Desbalance de clases (L1).\\
-      \textbf{Acción:} WeightedRandomSampler para batches equilibrados.
+      \textbf{Problema:} Desbalance de clases (G3 = 5\,\%).\\
+      \textbf{Acción:} Replicar filas de clases minoritarias hasta
+      alcanzar al menos el \textbf{12\,\%} de presencia cada una.
 
       \vspace{6pt}
-      \begin{block}{Resultados}
-        $\kappa^2 = 0{,}880$ \quad F1 $= 0{,}631$
-      \end{block}
-
-      \begin{itemize}
-        \item G2 sube de F1=0,72 a \textbf{0,78}
-        \item G3 apenas mejora (0,28 $\to$ 0,29)
-        \item El modelo se atreve más, no se refugia en G0
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.4\textwidth}
-      \begin{alertblock}{Lección}
-        Replicar datos $\neq$ añadir información.\\[4pt]
-        G3 necesita \textbf{variedad} (más centros, más equipos), no volumen.
-      \end{alertblock}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-% ── Slide 7: Exp D y E ──────────────────────────────────────────────────────
-\begin{frame}{Exp.~D y E --- Pipelines jerárquicos}
-  % GUION MIGUEL: "La segunda estrategia es dividir el problema. En vez de
-  % un modelo que haga todo, usamos una estructura en árbol. El Exp D separa
-  % primero sano de enfermo y luego gradúa. El resultado es el mejor F1 del
-  % proyecto empatado con A, y sobre todo sube mucho G4 que es la clase más
-  % peligrosa clínicamente. Esta estructura refleja cómo trabaja un
-  % oftalmólogo: primero screening, luego grading."
-
-  \begin{columns}[T]
-    \begin{column}{0.5\textwidth}
-      \textbf{Exp.~D --- Dos etapas:}
-      \begin{enumerate}
-        \item ¿Tiene RD? (G0 vs resto)
-        \item ¿Qué grado? (G1--G4)
-      \end{enumerate}
-
-      \vspace{4pt}
-      \textbf{Exp.~E --- Tres niveles:}
-      \begin{enumerate}
-        \item ¿Sano?
-        \item ¿Mild o Severe?
-        \item Grado final
-      \end{enumerate}
-    \end{column}
-    \begin{column}{0.47\textwidth}
       \small
       \begin{tabular}{lcc}
         \toprule
-        & $\kappa^2$ & F1 \\
+        & \textbf{Baseline} & \textbf{Exp.~A} \\
         \midrule
-        D & 0,860 & \textbf{0,631} \\
-        E & 0,855 & 0,602 \\
+        $\kappa^2$  & 0,862 & \textbf{0,880} \\
+        F1 macro    & 0,602 & \textbf{0,631} \\
+        F1 G2       & 0,715 & \textbf{0,775} \\
+        F1 G3       & 0,276 & 0,286 \\
+        F1 G4       & 0,508 & \textbf{0,561} \\
         \bottomrule
       \end{tabular}
 
       \vspace{8pt}
+      \begin{itemize}
+        \item G2 gran beneficiaria: el modelo se atreve
+              a no refugiarse en G0
+        \item G3 apenas mejora ($+0{,}01$)
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{alertblock}{Lección}
+        Replicar datos $\neq$ añadir información.\\[4pt]
+        G3 necesita \textbf{variedad}, no volumen.
+      \end{alertblock}
+      \vspace{4pt}
+      \centering
+      \includegraphics[width=0.85\textwidth]{exp_A_matrix.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ── Slide 6: Exp D y E ──────────────────────────────────────────────────────
+\begin{frame}{Exp.~D y E --- Pipelines jerárquicos (divide y vencerás)}
+
+  {\small\textbf{Idea:} Cada modelo ve un subproblema más pequeño y equilibrado.}
+
+  \vspace{4pt}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      {\small\textbf{Exp.~D --- Dos etapas}}
+      \vspace{2pt}
+
+      \centering
+      \begin{tikzpicture}[scale=0.85, every node/.style={scale=0.85},
+        box/.style={draw, rounded corners=3pt, minimum height=0.55cm,
+                    minimum width=2.2cm, font=\scriptsize, align=center},
+        arr/.style={->, >=stealth, semithick},
+        lbl/.style={font=\tiny, midway}
+      ]
+        \node[box, fill=azuloscuro!15] (img) at (0,0) {Imagen};
+        \node[box, fill=azulmedio!20] (e1) at (0,-0.95) {Modelo 1: ¿RD?};
+        \node[box, fill=green!15] (g0) at (-1.3,-1.9) {\textbf{G0}};
+        \node[box, fill=azulmedio!20] (e2) at (1.3,-1.9) {Modelo 2: Grado};
+        \node[box, fill=orange!15] (gx) at (1.3,-2.85) {\textbf{G1 G2 G3 G4}};
+
+        \draw[arr] (img) -- (e1);
+        \draw[arr] (e1) -- (g0) node[lbl, left] {Sano};
+        \draw[arr] (e1) -- (e2) node[lbl, right] {RD+};
+        \draw[arr] (e2) -- (gx);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      {\small\textbf{Exp.~E --- Tres niveles}}
+      \vspace{2pt}
+
+      \centering
+      \begin{tikzpicture}[scale=0.75, every node/.style={scale=0.75},
+        box/.style={draw, rounded corners=3pt, minimum height=0.5cm,
+                    minimum width=1.8cm, font=\scriptsize, align=center},
+        arr/.style={->, >=stealth, thin},
+        lbl/.style={font=\tiny, midway}
+      ]
+        \node[box, fill=azulmedio!20] (e1) at (0,0) {¿Tiene RD?};
+        \node[box, fill=green!15] (g0) at (-1.6,-0.9) {\textbf{G0}};
+        \node[box, fill=azulmedio!20] (e2) at (1.4,-0.9) {¿Mild/Severe?};
+        \node[box, fill=orange!10] (mild) at (0.2,-1.8) {¿G1/G2?};
+        \node[box, fill=red!10] (sev) at (2.6,-1.8) {¿G3/G4?};
+        \node[box, fill=orange!15] (g12) at (0.2,-2.7) {\textbf{G1/G2}};
+        \node[box, fill=red!15] (g34) at (2.6,-2.7) {\textbf{G3/G4}};
+
+        \draw[arr] (e1) -- (g0) node[lbl, left] {Sano};
+        \draw[arr] (e1) -- (e2) node[lbl, right] {RD+};
+        \draw[arr] (e2) -- (mild) node[lbl, left] {Mild};
+        \draw[arr] (e2) -- (sev) node[lbl, right] {Sev.};
+        \draw[arr] (mild) -- (g12);
+        \draw[arr] (sev) -- (g34);
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+
+  \vspace{12pt}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \centering
+      \scriptsize
+      \begin{tabular}{lcc}
+        \toprule
+        & $\kappa^2$ & F1 \\
+        \midrule
+        Baseline & 0,862 & 0,602 \\
+        Exp.~D   & 0,860 & \textbf{0,631} \\
+        Exp.~E   & 0,855 & 0,602 \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.48\textwidth}
       \begin{block}{G4 Proliferativa}
         F1: 0,51 (baseline) $\to$ \textbf{0,59} (Exp.~D)\\
         \textbf{+16\,\%} en la clase más crítica.
@@ -308,45 +329,83 @@
   \end{columns}
 \end{frame}
 
-% ── Slide 8: Exp F ───────────────────────────────────────────────────────────
-\begin{frame}{Exp.~F --- 384\,px + Regresión ordinal}
-  % GUION MIGUEL: "Aquí hacemos dos cambios importantes. Primero, subimos
-  % la resolución a 384px para ver mejor los microaneurismas. Segundo,
-  % dejamos de tratar los grados como clases independientes y los tratamos
-  % como una progresión continua con MSELoss, que tiene la misma forma
-  % que kappa cuadrático. Los umbrales se optimizan con Nelder-Mead.
-  % El kappa es bueno, 0.872, pero hay un problema grave: de 33 casos
-  % de G4 en test, solo detecta 3. La MSELoss con desbalance comprime
-  % las predicciones hacia el centro."
+% ── Slide 7: Exp F ───────────────────────────────────────────────────────────
+% ── Slide F.1: Cambios respecto al baseline ──────────────────────────────────
+\begin{frame}{Exp.~F --- 384\,px + Regresión ordinal: cambios en el pipeline}
 
+  {\small\textbf{Dejamos de tratar los grados como clases aisladas
+   y los vemos como una progresión continua.}}
+
+      \vspace{6pt}
   \begin{columns}[T]
-    \begin{column}{0.5\textwidth}
-      \textbf{Cambios respecto al baseline:}
-      \begin{itemize}
-        \item Resolución: 224 $\to$ \textbf{384\,px}
-        \item Cabeza: 5 neuronas $\to$ \textbf{1 neurona} (continua)
-        \item Pérdida: CrossEntropy $\to$ \textbf{MSELoss}
-        \item Post-proceso: argmax $\to$ \textbf{umbrales Nelder-Mead}
-      \end{itemize}
+    \begin{column}{0.48\textwidth}
+      \scriptsize
+      \begin{tabular}{lcc}
+        \toprule
+        & \textbf{Baseline} & \textbf{Exp.~F} \\
+        \midrule
+        Resolución & 224\,px & \textbf{384\,px} \\
+        Cabeza     & 5 neuronas + softmax & \textbf{1 neurona} \\
+        Pérdida    & CrossEntropy & \textbf{MSELoss} \\
+        Inferencia & argmax & \textbf{4 umbrales} \\
+        \bottomrule
+      \end{tabular}
 
-      \begin{block}{Resultados}
-        $\kappa^2 = 0{,}872$ \quad F1 $= 0{,}507$
+      \vspace{8pt}
+      \begin{block}{\scriptsize ¿Por qué MSELoss?}
+        \scriptsize
+        CrossEntropy: confundir G0$\leftrightarrow$G1 cuesta\\
+        lo mismo que G0$\leftrightarrow$G4.\\[3pt]
+        MSELoss: $(\hat{y}-y)^2$ $\to$ confundir G0 con G4\\
+        cuesta \textbf{16$\times$ más} que con G1.\\[3pt]
+        Misma forma que $\kappa^2$ $\to$ \textbf{loss y métrica alineadas}.
       \end{block}
     \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{alertblock}{Problema grave: G4}
-        De 33 imágenes de G4 en test,\\
-        \textbf{solo detecta 3} (recall = 9\,\%).\\[4pt]
-        MSELoss + desbalance $\to$\\
-        compresión hacia el centro.
-      \end{alertblock}
-      \vspace{4pt}
-      {\small Al analizar Grad-CAM se observa un
-       comportamiento mixto que motiva el Exp.~G.}
+    \begin{column}{0.50\textwidth}
+      \includegraphics[width=\textwidth]{exp_F_arquitectura.png}
+
+      \vspace{2pt}
+      {\tiny Umbrales optimizados con Nelder-Mead sobre validación.}
     \end{column}
   \end{columns}
 \end{frame}
 
+% ── Slide F.2: Resultados y Grad-CAM ────────────────────────────────────────
+\begin{frame}{Exp.~F --- Resultados e interpretabilidad}
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Resultados}
+        $\kappa^2 = 0{,}872$ \quad F1 $= 0{,}507$
+      \end{block}
+      \vspace{4pt}
+      \scriptsize
+      \begin{tabular}{lccc}
+        \toprule
+        & \textbf{Baseline} & \textbf{Exp.~F} & \textbf{$\Delta$} \\
+        \midrule
+        $\kappa^2$ & 0,862 & \textbf{0,872} & \textcolor{green!50!black}{+0,01} \\
+        F1 G2      & 0,715 & \textbf{0,671} & \textcolor{red!70!black}{$-$0,04} \\
+        F1 G3      & 0,276 & \textbf{0,317} & \textcolor{green!50!black}{+0,04} \\
+        F1 G4      & 0,508 & 0,158 & \textcolor{red!70!black}{$-$0,35} \\
+        \bottomrule
+      \end{tabular}
+      \vspace{8pt}
+      \begin{alertblock}{\scriptsize Problema grave: G4}
+        \scriptsize
+        De 33 imágenes de G4 en test,\\
+        \textbf{solo detecta 3} (recall = 9\,\%).\\[3pt]
+        MSELoss + desbalance $\to$ compresión\\
+        hacia el centro.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \centering
+      \includegraphics[width=0.75\textwidth]{grad_cam_exp_F.png}
+      \vspace{3pt}\\
+      {\tiny Grad-CAM Exp.~F: indicios de \textit{shortcut learning}. Motiva Exp.~G.}
+    \end{column}
+  \end{columns}
+\end{frame}
 % ══════════════════════════════════════════════════════════════════════════════
 %  SECCIÓN 3: MARTÍN — Exp. B, C, G, I, J + Conclusiones (~3 min)
 % ══════════════════════════════════════════════════════════════════════════════
