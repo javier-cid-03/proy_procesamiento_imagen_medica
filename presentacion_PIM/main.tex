@@ -412,7 +412,7 @@
 \section{Baselines alternativos, interpretabilidad y conclusiones}
 
 % ── Slide 9: Exp B y C ──────────────────────────────────────────────────────
-\begin{frame}{Exp.~B y C --- ¿Hace falta el deep learning?}
+\begin{frame}{Exp.~B y C --- ¿Hace falta ajuste fino de CNN en el dominio?}
   % GUION MARTÍN: "Antes de seguir mejorando el CNN, nos preguntamos: ¿hace
   % falta? El Exp B usa radiómica clásica con 107 features y regresión
   % logística L1. El kappa es 0.72, modesto, pero lo valioso es la
@@ -422,23 +422,50 @@
   % sí necesitamos entrenar un modelo específico."
 
   \begin{columns}[T]
-    \begin{column}{0.48\textwidth}
+    % ── Columna izquierda: resumen B y C ────────────────────────────────────
+    \begin{column}{0.40\textwidth}
       \textbf{Exp.~B --- Radiómica + LR L1}
       \begin{itemize}
         \item 107 features (PyRadiomics)
+        \item L1: coef.\ escasos $\to$ legibles
         \item $\kappa^2 = 0{,}722$ \quad F1 $= 0{,}479$
-        \item Valor: \textbf{interpretabilidad}
-        \item Ej: \texttt{10Percentile} $\to$ hemorragias
       \end{itemize}
-    \end{column}
-    \begin{column}{0.48\textwidth}
+
+      \vspace{8pt}
       \textbf{Exp.~C --- BiomedCLIP zero-shot}
       \begin{itemize}
         \item Sin entrenamiento en APTOS
         \item Prompts simples: $\kappa^2 = 0{,}711$
         \item Prompts clínicos: $\kappa^2 = 0{,}515$
-        \item Valor: confirma que \textbf{el ajuste fino es imprescindible}
       \end{itemize}
+    \end{column}
+
+    % ── Columna derecha: gráfico de importancia ──────────────────────────────
+    \begin{column}{0.57\textwidth}
+      \centering
+      {\small\textbf{Coef.\ L1 top --- G3 (Severa):}}\\[4pt]
+      \begin{tikzpicture}[x=0.48cm, y=0.54cm]
+        \draw[gray!35, thin] (0,0.1) -- (0,4.6);
+        \draw[gray!35, thin] (-5.2,0.1) -- (4.6,0.1);
+        % 10Percentile: -3.874
+        \fill[rojoko!65] (-3.874,3.6) rectangle (0,4.3);
+        \node[anchor=east, font=\scriptsize] at (-5.0,3.95) {\texttt{10Pctl}};
+        \node[anchor=west, font=\tiny, white] at (-3.75,3.95) {hemorragias $\downarrow$};
+        % HighGrayLevelRunEmphasis: +3.551
+        \fill[verdeok!55] (0,2.6) rectangle (3.551,3.3);
+        \node[anchor=east, font=\scriptsize] at (-5.0,2.95) {\texttt{HiGLRun}};
+        \node[anchor=west, font=\tiny, verdeok!80!black] at (3.65,2.95) {exudados $\uparrow$};
+        % Autocorrelation: +3.145
+        \fill[verdeok!55] (0,1.6) rectangle (3.145,2.3);
+        \node[anchor=east, font=\scriptsize] at (-5.0,1.95) {\texttt{Autocorr}};
+        % ZoneEntropy: +3.050
+        \fill[verdeok!55] (0,0.6) rectangle (3.050,1.3);
+        \node[anchor=east, font=\scriptsize] at (-5.0,0.95) {\texttt{ZoneEntr}};
+        \node[below, font=\tiny, gray!70] at (0,0.1) {$0$};
+      \end{tikzpicture}\\[3pt]
+      {\tiny
+        \textcolor{rojoko!80!black}{$\blacksquare$}~coef.\ negativo ($\downarrow$ intensidad)\quad
+        \textcolor{verdeok!70!black}{$\blacksquare$}~coef.\ positivo ($\uparrow$ intensidad)}
     \end{column}
   \end{columns}
 
@@ -446,7 +473,7 @@
   \centering
   \begin{block}{}
     \centering
-    Ambos quedan \textbf{14--15 puntos} por debajo del CNN $\to$ el deep learning sí aporta.
+    Ambos quedan \textbf{14--15 puntos} por debajo del CNN $\to$ el ajuste fino de una CNN en APTOS es imprescindible.
   \end{block}
 \end{frame}
 
@@ -482,8 +509,22 @@
       \end{alertblock}
     \end{column}
     \begin{column}{0.47\textwidth}
-      \includegraphics[width=\textwidth]{grad_cam_exp_F.png}
-      {\tiny Grad-CAM Exp.~F: comportamiento mixto.}
+      \begin{center}
+        \begin{columns}[c]
+          \begin{column}{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{diap11_F.png}\\[2pt]
+            {\tiny Exp.~F: activación mixta}
+          \end{column}
+          \begin{column}{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{diap11_G.png}\\[2pt]
+            {\tiny Exp.~G: periferia $\uparrow$}
+          \end{column}
+        \end{columns}
+        \vspace{4pt}
+        {\tiny Grad-CAM última capa (7$\times$7\,px): Graham amplifica bordes $\to$ gradiente periférico.}
+      \end{center}
     \end{column}
   \end{columns}
 \end{frame}
@@ -501,29 +542,67 @@
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       \textbf{Exp.~I --- Fusión CNN + Radiómica}
+      \vspace{3pt}
+
+      \begin{center}
+      \begin{tikzpicture}[scale=0.74, every node/.style={scale=0.74},
+        box/.style={draw, rounded corners=3pt, minimum height=0.55cm,
+                    minimum width=2.0cm, font=\scriptsize, align=center},
+        arr/.style={->, >=stealth, semithick}
+      ]
+        \node[box, fill=azuloscuro!15] (img) at (0,0) {Imagen};
+        \node[box, fill=azulmedio!20] (cnn) at (-1.5,-1.0) {CNN (Exp.~G)\\{\tiny 1\,536 feat.}};
+        \node[box, fill=orange!15]    (rad) at ( 1.5,-1.0) {PyRadiomics\\{\tiny 107 feat.}};
+        \node[box, fill=gray!15, minimum width=2.9cm] (lgb) at (0,-2.1)
+              {LightGBM\\{\tiny concat: 1\,643 feat.}};
+        \node[box, fill=verdeok!15, minimum width=3.1cm] (out) at (0,-3.0)
+              {\textbf{G0 · G1 · G2 · G3 · G4}};
+        \draw[arr] (img) -- (cnn);
+        \draw[arr] (img) -- (rad);
+        \draw[arr] (cnn) -- (lgb.north west);
+        \draw[arr] (rad) -- (lgb.north east);
+        \draw[arr] (lgb) -- (out);
+      \end{tikzpicture}
+      \end{center}
+
+      \vspace{2pt}
       \begin{itemize}
-        \item 1\,536 deep + 107 radiómicas
         \item $\kappa^2 = 0{,}855$ \quad F1 $= 0{,}631$
-        \item 96,5\,\% del peso es CNN
-        \item Radiómica ayuda en G1, G3
+        \item 96,5\,\% peso CNN; radiómica ayuda G1, G3
+        \item {\scriptsize $\kappa^2$ cae vs.\ G: LightGBM pierde calibración ordinal}
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
       \textbf{Exp.~J --- Pretrain APTOS 2015}
+      \vspace{3pt}
+
+      \begin{center}
+      \begin{tikzpicture}[scale=0.74, every node/.style={scale=0.74},
+        box/.style={draw, rounded corners=3pt, minimum height=0.55cm,
+                    minimum width=1.9cm, font=\scriptsize, align=center},
+        arr/.style={->, >=stealth, semithick}
+      ]
+        \node[box, fill=azuloscuro!15] (d15) at (-1.6, 0)    {APTOS 2015\\{\tiny 35\,k imgs}};
+        \node[box, fill=azulmedio!20]  (pre) at (-1.6,-1.05) {Pretrain\\{\tiny 20 épocas}};
+        \node[box, fill=azuloscuro!15] (d19) at ( 1.6, 0)    {APTOS 2019\\{\tiny 3\,k imgs}};
+        \node[box, fill=orange!15]     (ft)  at ( 1.6,-1.05) {Fine-tune\\{\tiny $lr=2{\times}10^{-5}$}};
+        \node[box, fill=verdeok!15, minimum width=3.4cm] (out) at (0,-2.15)
+              {\textbf{G0 · G1 · G2 · G3 · G4}};
+        \draw[arr] (d15) -- (pre);
+        \draw[arr] (d19) -- (ft);
+        \draw[arr] (pre) -- node[above, font=\tiny] {pesos} (ft);
+        \draw[arr] (ft)  -- (out);
+      \end{tikzpicture}
+      \end{center}
+
+      \vspace{2pt}
       \begin{itemize}
-        \item 35\,k imgs $\to$ fine-tune 2019
-        \item $\kappa^2 = \mathbf{0{,}885}$ \quad F1 $= 0{,}551$
-        \item \textbf{Mejor $\kappa^2$ del proyecto}
-        \item Época 1 de FT: ya $\kappa^2 = 0{,}883$
+        \item $\kappa^2 = \mathbf{0{,}885}$ \quad \textbf{Mejor del proyecto}
+        \item Época 1 FT: ya $\kappa^2 = 0{,}883$
         \item Recall G4: 9\,\% $\to$ 27\,\%
       \end{itemize}
     \end{column}
   \end{columns}
-
-  \vspace{6pt}
-  \centering
-  {\small El modelo J no aprende ``qué es una retina'' --- eso ya lo sabe.
-   Solo ajusta los detalles de APTOS 2019.}
 \end{frame}
 
 % ── Slide 12: Comparativa ────────────────────────────────────────────────────
@@ -555,8 +634,8 @@
   \end{tabular}
 
   \vspace{6pt}
-  {\footnotesize $\kappa^2 > 0{,}85$ = nivel profesional según APTOS 2019.
-   Todos los experimentos CNN superan este umbral.}
+  {\footnotesize $\kappa^2 > 0{,}85$ = nivel profesional (APTOS 2019).
+   Todos los modelos CNN entrenados superan el umbral; B y C son métodos sin \textit{fine-tuning} en APTOS.}
 \end{frame}
 
 % ── Slide 13: Conclusiones ──────────────────────────────────────────────────
